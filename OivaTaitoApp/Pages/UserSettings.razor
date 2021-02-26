@@ -1,0 +1,43 @@
+﻿@page "/usersettings"
+@using System
+@using OivaTaitoApp.Userid
+@using OivaTaitoApp.Services
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Pages
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Mvc
+@using Microsoft.AspNetCore.Mvc.RazorPages
+@using System.Security.Claims;
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Http
+@inject SignInManager<IdentityUser> SignInManager
+@inject GlobalId globalId
+@inject IJSRuntime JSRuntime
+@inject IHttpContextAccessor _httpContextAccessor
+@inject HttpClient Http
+@inject NavigationManager UriHelper
+@inherits OwningComponentBase<UserService>
+
+<div class="container">
+    <p>Täältä voit poistaa kaikki järjestelmässä olevat tietosi. Poista ne painamalla alla olevaa painiketta.</p>
+    <br />
+    <a class="ml-md-auto btn btn-primary" @onclick="@Delete" @onclick:preventDefault>Poista tiedot</a>
+</div>
+
+
+@code {
+
+    async Task Delete()
+    {
+        AppUser user = Service.GetUser(globalId.GetGlobalId());
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Oletko varma, että haluat poistaa kaikki tietosi sovelluksesta?"))
+            return;
+
+
+        UriHelper.NavigateTo("/LogoutDeleteUser");
+        //Service.DeleteUser(user);
+        await JSRuntime.InvokeVoidAsync("reloadPage");
+    }
+}

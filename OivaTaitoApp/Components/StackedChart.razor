@@ -1,0 +1,179 @@
+﻿@page "/stacked-chart"
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using ChartJs.Blazor
+@using ChartJs.Blazor.Common.Enums
+@using ChartJs.Blazor.Common.Axes
+@using ChartJs.Blazor.Common.Axes.Ticks
+@using ChartJs.Blazor.LineChart
+@using OivaTaitoApp.ChartJSClasses
+@using OivaTaitoApp.Userid
+
+@inject GlobalId globalId
+@inject IHttpContextAccessor _httpContextAccessor
+@inherits OwningComponentBase<UserService>
+
+@inject IJSRuntime JSRuntime;
+
+<AuthorizeView>
+    <Authorized>
+        <div>
+
+            @if (dataList != null && lineConfig != null)
+            {
+                <Chart @ref="lineChart" Config="lineConfig" />
+            }
+            else
+            {
+                <!-- Loader -->
+                <center>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Ladataan tietoja...</span>
+                    </div>
+                    <p style="font-weight: 600">Ladataan kaaviota...</p>
+
+                </center>
+            }
+        </div>
+        <div class="stacked-chart-paragraph-container">
+            <p>
+                Kaaviossa näet kehityksesi ajan myötä.
+                Mitä paksumpi kukin väri on, sitä vahvempi osaamesi on kyseisessä kategoriassa. Jos jokin väri ohenee, on syytä skarpata kyseisellä osa-alueella.
+            </p>
+            <p>
+                Vaaka-akselilla on kukin itsearviointikerta, ja pystyakselilla eri kategorioiden tulokset pinottuna päällekkäin.
+                Voit piilottaa eri alakategorioita painamalla sen nimeä kaavion yläpuolella.
+            </p>
+        </div>
+        <style>
+            body {
+                background-color: RGBA(226, 224, 229, .30);
+            }
+
+            .chartjs-render-monitor {
+                min-height: 560px !important;
+            }
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    private List<StackChartDataModel> dataList;
+
+    private Dictionary<int, LineDataset<float>> datasets = new Dictionary<int, LineDataset<float>>();
+    private Dictionary<int, float> lastKnownValues = new Dictionary<int, float>();
+    private List<QuestionSet> questionSets = new List<QuestionSet>();
+    private List<QuestionCategory> questionCategories;
+    private Chart lineChart;
+    private LineConfig lineConfig;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            questionCategories = Service.GetQuestionCategories();
+            //Populate questionSets list
+            questionCategories.ForEach(x => questionSets.AddRange(x.QuestionSets));
+
+            int userId = Service.GetUserId(globalId.GetGlobalId().ToString());
+
+            dataList = Service.GetUserSelfEvalAvgPerSet(userId);
+
+            lineConfig = new LineConfig
+            {
+                Options = new LineOptions
+                {
+                    MaintainAspectRatio = false,
+                    Responsive = true,
+                    ShowLines = true,
+                    Scales = new Scales
+                    {
+                        XAxes = new List<CartesianAxis>
+            {
+                        new CategoryAxis
+                        {
+                            Display = AxisDisplay.True
+                        }
+                    },
+                        YAxes = new List<CartesianAxis>
+            {
+                        new StackedLinearCartesianAxes
+                        {
+                            Stacked = true,
+                            Ticks = new LinearCartesianTicks
+                            {
+                                BeginAtZero = true,
+                                Max = 5 * questionSets.Count,
+                                Min = 0,
+                                SuggestedMax = 5 * questionSets.Count,
+                                SuggestedMin = 0
+                            }
+                        }
+                    }
+                    }
+                }
+            };
+
+            foreach (QuestionSet set in questionSets)
+            {
+                string CategoryColor = questionCategories.FirstOrDefault(c => c.Id.Equals(set.QuestionCategoryId)).ColorHex;
+
+                var userAvgsDataSet = new LineDataset<float>
+                {
+                    Label = set.Title,
+                    PointRadius = 3,
+                    PointHitRadius = 3,
+                    PointHoverBorderWidth = 3,
+                    PointHoverRadius = 3,
+                    BorderWidth = 4,
+                    BackgroundColor = "#" + CategoryColor,
+                    //BackgroundColor = ColorUtil.RandomColorString(),
+                    //BorderColor ,
+                    Fill = true
+                };
+                lineConfig.Data.YLabels.Add(set.Title);
+                datasets.Add(set.Id, userAvgsDataSet);
+                lastKnownValues.Add(set.Id, 0);
+            }
+
+            foreach (StackChartDataModel dataListItem in dataList)
+            {
+                foreach (var dataset in datasets)
+                {
+                    float avg = 0;
+
+                    if (dataListItem.AveragePerCategory.ContainsKey(dataset.Key))
+                    {
+                        dataListItem.AveragePerCategory.TryGetValue(dataset.Key, out avg);
+                        lastKnownValues[dataset.Key] = avg;
+                        dataset.Value.Add(avg);
+                    }
+                    else
+                    {
+                        lastKnownValues.TryGetValue(dataset.Key, out avg);
+                        dataset.Value.Add(avg);
+                    }
+                }
+            }
+
+            foreach (var dataset in datasets)
+            {
+                lineConfig.Data.Datasets.Add(dataset.Value);
+            }
+
+            foreach (var dataitem in dataList)
+            {
+                lineConfig.Data.XLabels.Add(dataitem.EvaluatedAt.Date.ToString("dd/MM/yyyy"));
+            }
+
+            StateHasChanged();
+        }
+
+        return base.OnAfterRenderAsync(firstRender);
+    }
+}

@@ -1,0 +1,80 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>aspnet-OivaTaitoApp-17C3A5D8-97E1-4838-9F0A-D90C60F8C742</UserSecretsId>
+    <RootNamespace>OivaTaitoApp</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Custom' ">
+    <StartAction>Project</StartAction>
+    <ExternalConsole>true</ExternalConsole>
+    <ApplicationURL>http://localhost:40395</ApplicationURL>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\**" />
+    <Compile Remove="Models\**" />
+    <Compile Remove="Properties\ServiceDependencies\**" />
+    <Content Remove="Controllers\**" />
+    <Content Remove="Models\**" />
+    <Content Remove="Properties\ServiceDependencies\**" />
+    <EmbeddedResource Remove="Controllers\**" />
+    <EmbeddedResource Remove="Models\**" />
+    <EmbeddedResource Remove="Properties\ServiceDependencies\**" />
+    <None Remove="Controllers\**" />
+    <None Remove="Models\**" />
+    <None Remove="Properties\ServiceDependencies\**" />
+    <_WebToolingArtifacts Remove="Properties\ServiceDependencies\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Data\Migrations\20200706121006_AppUser-Table.cs" />
+    <Compile Remove="Data\Migrations\20200706121006_AppUser-Table.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200708164939_Add-Content.cs" />
+    <Compile Remove="Data\Migrations\20200708164939_Add-Content.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200709172525_Add-SelfEval-Tables.cs" />
+    <Compile Remove="Data\Migrations\20200709172525_Add-SelfEval-Tables.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200709172841_Add-SelfEval-Tables.cs" />
+    <Compile Remove="Data\Migrations\20200709172841_Add-SelfEval-Tables.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200709174235_Add-SelfEval-Tables.cs" />
+    <Compile Remove="Data\Migrations\20200709174235_Add-SelfEval-Tables.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200813093310_Modified-SelfEvalResultRows.cs" />
+    <Compile Remove="Data\Migrations\20200813093310_Modified-SelfEvalResultRows.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200903174718_Change-Float-To-Double.cs" />
+    <Compile Remove="Data\Migrations\20200903174718_Change-Float-To-Double.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201109162236_added-table-improvementlinks.cs" />
+    <Compile Remove="Data\Migrations\20201109162236_added-table-improvementlinks.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210202164941_Modified data.cs" />
+    <Compile Remove="Data\Migrations\20210202164941_Modified data.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ChartJs.Blazor.Fork" Version="2.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="3.1.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="3.1.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.8.0" />
+    <PackageReference Include="NuGet.CommandLine" Version="5.8.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="3.1.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Razor.Language" Version="3.1.12" />
+    <PackageReference Include="Blazored.LocalStorage" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ChartJSClasses\" />
+    <Folder Include="Userid\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="Data\QuestionService.cshtml" />
+  </ItemGroup>
+</Project>

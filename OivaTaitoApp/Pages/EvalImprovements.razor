@@ -1,0 +1,106 @@
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager NavManager
+@inherits OwningComponentBase<EvaluationService>
+@page "/eval-improvements"
+@inject IJSRuntime JSRuntime;
+
+
+@if (questionCategories != null)
+{
+    <div class="container">
+
+        <h1 class="improvement-title">KEHITYSEHDOTUKSET</h1>
+        <div class="dropdown-container">
+            <div class="dropdown">
+                @foreach (QuestionCategory category in questionCategories)
+                {
+                    CategoryColor = "#" + category.ColorHex;
+                    <div class="improvement-ul">
+                        <button class="btn btn-secondary dropdown-toggle improvement-button" style="background-color: @CategoryColor" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            @category.Identifier . @category.Title
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li class="col-sm-12">
+                                @foreach (QuestionSet set in Service.GetQuestionSets(category.Id))
+                                {
+                                    improvement = Service.GetImprovement(set.Id);
+
+                                    <ul class="dropdown-item" tabindex="0">
+                                        <li tabindex="0" class="dropdown-title">@set.Identifier . @set.Title</li>
+                                        @if (improvement != null)
+                                        {
+                                            improvementLinkList = Service.GetImprovementLinks(improvement.Id);
+                                            <li tabindex="0">@improvement.ImprovementContent</li>
+                                            <li style="font-size: 18px;" tabindex="0">Linkit:</li>
+                                            foreach (ImprovementLink link in improvementLinkList)
+                                            {
+                                                <li><a tabindex="0" href="@link.LinkUrl">@link.LinkTitle</a></li>
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            <li tabindex="0">Tälle alakategorialle ei löydy kehitysehdotusta.</li>
+                                        }
+                                    </ul>
+                                }
+                            </li>
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+}
+<style>
+    ul.dropdown-item:active {
+        background: #FFFFFF;
+        color: #000000;
+    }
+
+    ul.dropdown-item:hover {
+        background: #FFFFFF;
+        color: #000000;
+    }
+
+    .btn btn-secondary dropdown-toggle:active {
+        box-shadow: 0px 0px 4px 4px rgba(125,125,125,1);
+    }
+</style>
+
+
+
+@code {
+    private EvalImprovement improvement;
+
+    private List<ImprovementLink> improvementLinkList;
+
+    private List<QuestionCategory> questionCategories;
+
+    string CategoryColor;
+
+    bool showItem = false;
+
+    void ShowItem()
+    {
+        if (showItem == true)
+        {
+            showItem = false;
+        }
+        else
+        {
+            showItem = true;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        questionCategories = Service.GetQuestionCategories();
+    }
+}

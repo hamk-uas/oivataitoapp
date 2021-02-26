@@ -1,0 +1,172 @@
+﻿@page "/startpage"
+
+<div class="container">
+    <div class="content-container">
+        <span class="start-logo">
+            <img src="./Images/Oiva-logo-135x135.png" alt="Oiva logo" />
+        </span>
+        <h1 class="startpage-title">OivaTaito</h1>
+        <div class="content">
+            <p>
+                OivaTaito on työkalu, jolla voidaan visualisoida ja konkretisoida oma geneerinen osaaminen.
+                Sovelluksen on tarkoitus tukea opiskelijan oman osaamisen tunnistamista ja sanoittamista
+                sekä tunnistetun osaamispotentiaalin soveltamista emergentissä toimintaympäristössä ja verkostoissa.
+            </p>
+            <p>
+                Sovelluksen mittaristot on luotu pedagogisten asiantuntijoiden avulla, konkretisoiden opintojen aikana kerääntyvää osaaminen.
+                Samaan mittaristoon on kerätty myös valmistuneiden ja työllistyneiden alumnien näkemys tarvittavasta osaamisesta,
+                ja huomioidaan myös työnantajien ja työvoimapalveluiden näkemys.
+            </p>
+            <p>
+                Sovellus käyttää kirjautumisessa Google Sign-In -rajapintaa. Paina alla olevasta painikkeesta ja pääset kirjautumaan palveluun.
+            </p>
+        </div>
+
+        <div class="container-login100-form-btn">
+            <a class="login100-form-btn" href="/Login">
+                Jatka kirjautumiseen
+            </a>
+        </div>
+
+        @*<div class="oiva-images">
+            <span class="esr-logo">
+                <img class="esr-flag" src="./Images/EU_ESR_FI_vertical_20mm_rgb.png" alt="ESR lipputunnus"/>
+            </span>
+            <span class="vipuvoimaa-logo">
+                <img class="vipuvoimaa" src="./Images/VipuvoimaaEU_2014_2020_rgb.png" alt="Vipuvoimaa EU:lta -tunnus"/>
+            </span>
+        </div>*@
+
+    </div>
+</div>
+<style>
+    img.vipuvoimaa {
+        height: 30%;
+        width: 30%;
+    }
+
+    img.esr-flag {
+        height: 30%;
+        width: 30%;
+    }
+
+    .container-login100-form-btn {
+        padding-top: 40px;
+        width: 100%;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: -moz-box;
+        display: -ms-flexbox;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .login100-form-btn {
+        font-family: "Josefin Sans";
+        font-size: 16px;
+        color: #555555;
+        line-height: 1.2;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: -moz-box;
+        display: -ms-flexbox;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0 20px;
+        min-width: 120px;
+        height: 50px;
+        border-radius: 25px;
+        position: relative;
+        z-index: 1;
+        -webkit-transition: all 0.4s;
+        -o-transition: all 0.4s;
+        -moz-transition: all 0.4s;
+        transition: all 0.4s;
+    }
+
+        .login100-form-btn::before {
+            content: "";
+            display: block;
+            position: absolute;
+            z-index: -1;
+            width: 100%;
+            height: 100%;
+            border-radius: 25px;
+            background-color: #fff;
+            top: 0;
+            left: 0;
+            opacity: 1;
+            -webkit-transition: all 0.4s;
+            -o-transition: all 0.4s;
+            -moz-transition: all 0.4s;
+            transition: all 0.4s;
+        }
+
+        .login100-form-btn:hover {
+            color: black;
+        }
+
+            .login100-form-btn:hover:before {
+                opacity: 30;
+            }
+
+    .content {
+        font-family: Raleway;
+        font-size: 14px;
+        font-style: normal;
+        font-variant: normal;
+        font-weight: 100;
+        line-height: 20px;
+        text-align: center;
+        color: white;
+    }
+
+    .content-container {
+        height: 88vh;
+        padding: 40px;
+        background-color: #fafafa;
+        border: 0;
+        box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        border-radius: 1em;
+        max-height: 100%;
+        background-image: linear-gradient(180deg, rgb(86, 99, 139) 0%, #56638B 70%);
+    }
+
+    .startpage-title {
+        padding-top: 20px;
+        padding-left: 20px;
+        padding-right: 20px;
+        text-align: center;
+        font-family: "Raleway";
+        font-size: 32px;
+        font-style: normal;
+        font-variant: normal;
+        font-weight: bold;
+        line-height: 26.4px;
+        color: white;
+    }
+
+    .start-logo {
+        font-size: 60px;
+        color: #333333;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: -moz-box;
+        display: -ms-flexbox;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background-color: #fff;
+        margin: 0 auto;
+    }
+</style>
+<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Josefin+Sans" />
+
+<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Raleway" />
+@{
+}

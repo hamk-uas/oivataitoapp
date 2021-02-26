@@ -1,0 +1,226 @@
+﻿@page "/results"
+
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using OivaTaitoApp.Components
+@using OivaTaitoApp.Userid
+
+@inject GlobalId globalId
+@inject NavigationManager UriHelper
+@inject IHttpContextAccessor _httpContextAccessor
+
+@inherits OwningComponentBase<UserService>
+
+
+<AuthorizeView>
+    <Authorized>
+        <div class="profile-container">
+            @if (showLoader)
+            {
+                <!-- Loader -->
+                <center style="padding-top: 60px;">
+                    <h1>Ladataan tietoja...</h1>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Ladataan tietoja...</span>
+                    </div>
+                </center>
+            }
+            else
+            {
+                <h1 class="profile-title">Tuloksesi</h1>
+
+                //Check if we should show the accessible data table or chart
+                if (showAccessibleInfo)
+                {
+                    if (showStackedLine)
+                    {
+                        <AccessibleStackedChart />
+                    }
+                    else
+                    {
+                        <div class="row justify-content-center">
+                            <ul class="list-group w-100">
+                                <li class="list-group-item d-flex justify-content-between align-items-center" tabindex="0" style="padding: 15px;">
+                                    <span class="accessible-chart-header" tabindex="0">Kategoria</span>
+                                    <span class="accessible-chart-header" tabindex="0">Sinun viimeisin keskiarvosi</span>
+                                    <span class="accessible-chart-header" tabindex="0">Kaikkien keskiarvo</span>
+                                </li>
+                                @foreach (var item in userAvgByCat)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center" tabindex="0" style="padding: 15px;">
+                                        <span class="accessible-chart-item-key" tabindex="0">@questionCategories.Where(c => c.Id == item.Key).Select(c => c.Identifier + ". " + c.Title).FirstOrDefault()</span>
+                                        <span class="accessible-chart-item-value" tabindex="0">@item.Value</span>
+                                        <span class="accessible-chart-item-value" tabindex="0">@totalAvgByCat[item.Key]</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="chart-container">
+
+                        @if (showStackedLine)
+                        {
+                            <div class="stackedchart-container">
+                                <StackedChart />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="barchart-container">
+                                <BarChart />
+                            </div>
+                        }
+
+                        @*If the user hasn't completed an initial evaluation AND one self evaluation, the stacked chart doesn't display any useful data
+                        So don't show the button unless this condition is met*@
+                        @if (userEvalCount > 2)
+                        {
+                            //Toggle between charts
+                            <center><button type="button" class="btn btn-primary" @onclick="@ToggleChartType">Vaihda kaaviota</button></center>
+                        }
+                    </div>
+                }
+
+                <hr />
+
+                //Define the content of the button to toggle the visibility of the accessible data table
+                @if (showAccessibleInfo)
+                {
+                    <center><button type="button" class="btn btn-primary" style="margin-bottom: 15px;" @onclick="@ToggleAccessibleTableVisibility">Näytä kaavio</button></center>
+                }
+                else
+                {
+                    <center><button type="button" class="btn btn-primary" style="margin-bottom: 15px;" @onclick="@ToggleAccessibleTableVisibility">Näytä taulukko</button></center>
+                }
+
+
+            }
+
+        </div>
+        <style>
+            body {
+                background-color: RGBA(226, 224, 229, .30);
+            }
+
+            .profile-container {
+                padding: 0;
+                margin: 0;
+            }
+
+            .accessible-chart-header {
+                width: 33%;
+            }
+
+            .accessible-chart-item-key {
+                width: 33%;
+            }
+
+            .accessible-chart-item-value {
+                width: 33%;
+            }
+
+            .dropdown {
+                padding-bottom: 15px;
+            }
+
+            .bs-linebreak {
+                height: 15px;
+            }
+
+            hr {
+                margin-top: 1rem;
+                margin-bottom: 1rem;
+                border: 0;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+                padding-top: 30px;
+            }
+
+            .time-estimation, .answered-questions {
+                padding-top: 20px;
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-bottom: 0px;
+                font-family: "Josefin Sans";
+                font-size: 14px;
+                font-style: normal;
+                font-variant: normal;
+                font-weight: 700;
+                text-align: center;
+            }
+
+            .initeval-button {
+                padding: 0.7em 1.7em;
+                max-width: 400px;
+                margin: 0 auto;
+                box-shadow: 0 0 4px rgba(0,0,0,0.3);
+                border-radius: 1em;
+                border-width: 0px;
+                box-sizing: border-box;
+                text-decoration: none;
+                font-family: "Josefin Sans";
+                font-weight: 400;
+                color: #FFFFFF;
+                background-color: rgba(54,0,141,0.85);
+                position: relative;
+                cursor: pointer;
+            }
+
+                .initeval-button:hover {
+                    background-color: rgba(54,0,141,0.7);
+                }
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code{
+
+    private List<QuestionCategory> questionCategories;
+    private Dictionary<int, float> userAvgByCat;
+    private Dictionary<int, float> totalAvgByCat;
+
+    private bool showStackedLine;
+    private bool showAccessibleInfo;
+
+    private const string yearInfo = "Valitse vuosikurssi ennen kun aloitat lähtötasotestin tekemisen.";
+
+    private bool showLoader = true;
+
+    int userEvalCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            questionCategories = Service.GetQuestionCategories();
+            int userId = Service.GetUserId(globalId.GetGlobalId());
+            userEvalCount = await Service.GetSelfEvalCountAsync(userId);
+            userAvgByCat = Service.LatestUserAvgScorePerCat(userId);
+            totalAvgByCat = Service.TotalAverageScoreByCategory();
+
+            showLoader = false;
+
+            StateHasChanged();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    //Switch between the bar chart and the stacked chart
+    private void ToggleChartType()
+    {
+        showStackedLine = !showStackedLine;
+    }
+
+    //Toggle the visibility of the accessible data table
+    private void ToggleAccessibleTableVisibility()
+    {
+        showAccessibleInfo = !showAccessibleInfo;
+    }
+}

@@ -1,0 +1,61 @@
+<div class="top-row pl-4 navbar navbar-dark">
+        <a class="navbar-brand" href="" aria-label="Navigate to homepage">OivaTaito</a>
+        <button class="navbar-toggler" aria-label="Toggle navigation link list" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+
+    <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+        <ul class="nav flex-column">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="oi oi-home" aria-hidden="true"></span> Koti
+                </NavLink>
+            </li>
+
+            <AuthorizeView>
+                <Authorized>
+
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="results">
+                            <span class="oi oi-person" aria-hidden="true"></span> Tuloksesi
+                        </NavLink>
+                    </li>
+
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="evaluationstart">
+                            <span class="oi oi-task" aria-hidden="true"></span> Itsearvionti
+                        </NavLink>
+                    </li>
+
+                </Authorized>
+            </AuthorizeView>
+
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="eval-improvements">
+                    <span class="oi oi-list" aria-hidden="true"></span> Kehitysehdotukset
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="useful-links">
+                    <span class="oi oi-external-link" aria-hidden="true"></span> Linkit
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="third-party-licences">
+                    <span class="oi oi-info" aria-hidden="true"></span> Tietoa
+                </NavLink>
+            </li>
+        </ul>
+    </div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

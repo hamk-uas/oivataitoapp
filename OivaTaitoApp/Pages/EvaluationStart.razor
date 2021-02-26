@@ -1,0 +1,368 @@
+﻿@page "/evaluationstart"
+
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using OivaTaitoApp.Components
+@using OivaTaitoApp.Userid
+
+@inject GlobalId globalId
+@inject NavigationManager UriHelper
+@inject IHttpContextAccessor _httpContextAccessor
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+@inherits OwningComponentBase<UserService>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container">
+
+            @if (showLoading)
+            {
+                <!-- Loader -->
+                <center style="padding-top: 60px;">
+                    <h1>Ladataan tietoja...</h1>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Ladataan tietoja...</span>
+                    </div>
+                </center>
+            }
+            else
+            {
+
+                <div class="row">
+                    <div class="col-md-12 bs-linebreak">
+                    </div>
+                </div>
+
+                //Check if user has completed initial self evaluation
+                @if (!isInitEvalCompleted)
+                {
+                    @*//UI elements for the unfinished year selection feature
+
+                    <div class="row justify-content-md-center">
+                    <div class="col">
+                            <InfoBox Title="Valitse vuosikurssi ennen kun aloitat lähtötasotestin tekemisen." />
+                    </div>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="dropdown">
+                        <button class="ml-md-auto btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Valitse vuosikurssi
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            <a class="dropdown-item" href="#">Vuosikurssi 1</a>
+                            <a class="dropdown-item" href="#">Vuosikurssi 2</a>
+                            <a class="dropdown-item" href="#">Vuosikurssi 3</a>
+                            <a class="dropdown-item" href="#">Vuosikurssi 4</a>
+                            <a class="dropdown-item" href="#">Vuosikurssi 5 tai enemmän</a>
+                        </div>
+                    </div>
+                </div>*@
+
+                    <hr />
+
+                    <div class="row justify-content-md-center">
+                        <div class="col">
+                            <p>Tee ensimäiseksi lähtötasotesti, jonka avulla kartoitamme tämänhetkisen osaamistasosi.</p>
+                        </div>
+                    </div>
+
+                    //Check if the init eval is incomplete
+                    @if (incompleteSelfEval)
+                    {
+                        <div class="row justify-content-md-center">
+                            <div class="col">
+                                <button class="initeval-button incomplete-eval" type="button" @onclick="@GoToInitEval">Lähtötasotestiin</button>
+                            </div>
+                        </div>
+
+
+
+                        <div class="row justify-content-md-center">
+                            <span class="answered-questions">
+
+                                @if (progressInInitEval > 0 && totalQCount > 0) //When loading the incomplete init eval data is complete, show the improved info text
+                                {
+                                    <span class="answered-questions">@initEvalInfo Vastatut kysymykset: @progressInInitEval / @totalQCount</span>
+                                }
+                                else
+                                {
+                                    <span class="answered-questions">@initEvalInfo</span>
+                                }
+
+                            </span>
+                        </div>
+
+                    }
+                    else
+                    {
+                        <div class="row justify-content-md-center">
+                            <div class="col">
+                                <button class="initeval-button" type="button" @onclick="@GoToInitEval">Lähtötasotestiin</button>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col">
+                                <span class="time-estimation">Arvioitu kesto 8 - 20min</span>
+                            </div>
+                        </div>
+                    }
+                }
+                // User has completed initial evaluation, proceed to print buttons for each category
+                else
+                {
+                    if (questionCategories != null)
+                    {
+                        <div class="row justify-content-md-center">
+                            <div class="col">
+                                <h1 class="self-evaluation-title">Itsearvionti</h1>
+                                <span>Valitse arvioitava kategoria</span>
+                            </div>
+                        </div>
+                        <br />
+
+                        //Print buttons for categories
+                        foreach (QuestionCategory category in questionCategories)
+                        {
+                            string CategoryColor = "#" + category.ColorHex;
+
+                            <div class="row">
+                                @if (incompleteSelfEval) //check if there are started but not finished evaluations
+                                {
+                                    int completedQ; //Number of completed questions in category
+                                    int qCount; //Total number of questions in category
+
+                                    if (progressInIncompleteSelfEval != null && totalQCountInCat != null)
+                                    {
+                                        //Check if we can find progress in an incomplete evaluation for this category
+                                        if (progressInIncompleteSelfEval.TryGetValue(category.Id, out completedQ)
+                                            && totalQCountInCat.TryGetValue(category.Id, out qCount))
+                                        {
+                                            string info = $"Tämä itsearviointi on keskeneräinen. Vastattu: {completedQ} / {qCount}";
+                                            <div>
+                                                <InfoBox Title="@info" />
+                                            </div>
+                                            <button class="categorylist incomplete-eval" style="background-color: @CategoryColor"
+                                                    aria-hidden="true" @onclick="@(e => Navigate(e, category.Id))">
+                                                @category.Identifier . @category.Title
+                                            </button>
+                                        }
+                                        else //Could not find progress in an incomplete evaluation for this category, print normal button
+                                        {
+                                            <button class="categorylist" style="background-color: @CategoryColor"
+                                                    aria-hidden="true" @onclick="@(e => Navigate(e, category.Id))">
+                                                @category.Identifier . @category.Title
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <button class="categorylist" style="background-color: @CategoryColor"
+                                                aria-hidden="true" @onclick="@(e => Navigate(e, category.Id))">
+                                            @category.Identifier . @category.Title
+                                        </button>
+                                    }
+                                }
+                                else //No incomplete self evals, print a normal button
+                                {
+                                    <button class="categorylist" style="background-color: @CategoryColor"
+                                            aria-hidden="true" @onclick="@(e => Navigate(e, category.Id))">
+                                        @category.Identifier . @category.Title
+                                    </button>
+                                }
+                            </div>
+
+                        }
+                    }
+                    else
+                    {
+                        <p>Ladataan tietoja...</p>
+                    }
+                }
+            }
+        </div>
+        <style>
+            body {
+                background-color: RGBA(226, 224, 229, .30);
+            }
+
+            .accessible-chart-header {
+                width: 33%;
+            }
+
+            .accessible-chart-item-key {
+                width: 33%;
+            }
+
+            .accessible-chart-item-value {
+                width: 33%;
+            }
+
+            .dropdown {
+                padding-bottom: 15px;
+            }
+
+            .bs-linebreak {
+                height: 15px;
+            }
+
+            hr {
+                margin-top: 1rem;
+                margin-bottom: 1rem;
+                border: 0;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+                padding-top: 15px;
+            }
+
+            .time-estimation, .answered-questions {
+                padding-top: 20px;
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-bottom: 0px;
+                font-family: "Josefin Sans";
+                font-size: 14px;
+                font-style: normal;
+                font-variant: normal;
+                font-weight: 700;
+                text-align: center;
+            }
+
+            .initeval-button {
+                padding: 0.7em 1.7em;
+                max-width: 400px;
+                margin: 0 auto;
+                box-shadow: 0 0 4px rgba(0,0,0,0.3);
+                border-radius: 1em;
+                border-width: 0px;
+                box-sizing: border-box;
+                text-decoration: none;
+                font-family: "Josefin Sans";
+                font-weight: 400;
+                color: #FFFFFF;
+                background-color: rgba(54,0,141,0.85);
+                position: relative;
+                cursor: pointer;
+            }
+
+            .initeval-button:hover {
+                background-color: rgba(54,0,141,0.7);
+            }
+
+            .incomplete-eval {
+                box-shadow: 0px 0px 4px 4px rgba(242, 38, 19, 1);
+            }
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool showLoading = true;
+
+    private List<QuestionCategory> questionCategories;
+
+    private int userId;
+
+    private bool isInitEvalCompleted;
+    private int progressInInitEval;
+    private int totalQCount;
+
+    private bool incompleteSelfEval;
+
+    //Key is category ID, value is completed answers within that cat
+    private Dictionary<int, int> progressInIncompleteSelfEval;
+
+    //Key is category ID, value is total number of questions within that cat
+    private Dictionary<int, int> totalQCountInCat;
+
+    private const string initEvalInfo = "Lähtötasotesti on keskeneräinen.";
+    private const string yearInfo = "Valitse vuosikurssi ennen kun aloitat lähtötasotestin tekemisen.";
+    private const string incompleteSelfEvalInfo = "Tämä itsearviointi on keskeneräinen.";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            questionCategories = Service.GetQuestionCategories();
+            userId = Service.GetUserId(globalId.GetGlobalId());
+            isInitEvalCompleted = Service.IsInitEvalCompleted(userId);
+
+            //Check if we can find data for incomplete evaluations in browser's local storage
+            if (await localStorage.LengthAsync() > 0)
+            {
+                incompleteSelfEval = true;
+                showLoading = false;
+
+                StateHasChanged();
+
+                //Check if user has completed initial evaluation
+                if (isInitEvalCompleted)
+                {
+                    progressInIncompleteSelfEval = new Dictionary<int, int>();
+                    totalQCountInCat = new Dictionary<int, int>();
+                }
+                else
+                    totalQCount = Service.GetQuestionCount();
+
+                foreach (QuestionCategory category in questionCategories)
+                {
+                    int answQ = 0; //Number of answered questions
+                    foreach (QuestionSet questionSet in category.QuestionSets)
+                    {
+                        foreach (Question question in questionSet.Questions)
+                        {
+                            //Check if we can find the ID of the question in browser's local storage
+                            if (await localStorage.ContainKeyAsync(question.Id.ToString()))
+                            {
+                                answQ++; //+1 answered question in this question set
+                            }
+                        }
+                    }
+
+                    //Zero answered questions means no incomplete evaluation for this category, so we can skip the following
+                    if (answQ > 0)
+                    {
+                        if (isInitEvalCompleted)
+                        {
+                            progressInIncompleteSelfEval.Add(category.Id, answQ);
+
+                            int qCount = Service.GetCategoryQuestionCount(category.Id);
+                            totalQCountInCat.Add(category.Id, qCount);
+                        }
+                        else
+                        {
+                            //User hasn't completed initial evaluation, sum up the progress from all categories
+                            progressInInitEval += answQ;
+                        }
+                    }
+
+                    //If init eval is complete, we can re-render the page to show a category button
+                    if(isInitEvalCompleted)
+                        StateHasChanged();
+                }
+            }
+            //No incomplete self eval detected, all data loaded
+            else
+                showLoading = false;
+
+            StateHasChanged();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    void GoToInitEval()
+    {
+        UriHelper.NavigateTo("/initeval-test/" + 0);
+    }
+
+    void Navigate(EventArgs e, int categoryId)
+    {
+        UriHelper.NavigateTo("/questioncard/" + categoryId);
+    }
+}

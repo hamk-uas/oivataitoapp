@@ -1,0 +1,174 @@
+﻿@page "/sesc"
+
+@using OivaTaitoApp.Services;
+@using OivaTaitoApp.Data.Models;
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Components
+
+@inherits OwningComponentBase<UserService>
+
+@inject IHttpContextAccessor _httpContextAccessor
+
+<AuthorizeView>
+    <Authorized>
+        <h3>Testview</h3>
+
+        @if (myUserId != 0)
+        {
+            <p>User ID: @myUserId</p>
+        }
+        else
+        {
+            <p>Could not fetch current user ID!</p>
+        }
+
+        @if (!string.IsNullOrEmpty(myGId))
+        {
+            <p>Google ID: @myGId</p>
+        }
+        else
+        {
+            <p>Could not fetch Google ID!</p>
+        }
+
+        @if (appUsers != null)
+        {
+            <table class="table-bordered">
+                <thead>
+                    <tr>
+                        <th scope="col">Id</th>
+                        <th scope="col">GoogleId</th>
+                        <th scope="col">Init eval done</th>
+                        <th scope="col">Evals</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var appuser in appUsers)
+                    {
+                        int evals = 0;
+                        userEvalCount.TryGetValue(appuser.Id, out evals);
+
+                        <tr scope="row">
+                            <td>@appuser.Id</td>
+                            <td>@appuser.GoogleId</td>
+                            @if (@appuser.initEvalCompleted)
+                            {
+                                <td class="badge-success">Yes</td>
+                            }
+                            else
+                            {
+                                <td class="badge-warning">No</td>
+                            }
+                            <td>@evals</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>Fetching users</p>
+        }
+
+        <input type="search" name="userId" @bind-value="userId" />
+        <button @onclick="StartDataFetch" disabled="@buttonDisabled">Submit</button>
+
+        @if (data != null)
+        {
+            foreach (var item in data)
+            {
+                <p>@item.EvaluatedAt</p>
+                foreach (var subItem in item.AveragePerCategory)
+                {
+                    <p>@subItem.Key</p>
+                    <p>@subItem.Value</p>
+                }
+                <br />
+                <br />
+                <br />
+            }
+        }
+
+        @if (exception != null)
+        {
+            <div class="alert-danger">
+                <p>@exception.Message</p>
+                <p>@exception.StackTrace</p>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    List<StackChartDataModel> data;
+    List<AppUser> appUsers;
+    Dictionary<int, int> userEvalCount = new Dictionary<int, int>();
+    string userId;
+    int myUserId = 0;
+    string myGId;
+    Exception exception;
+    bool buttonDisabled;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Try to get the Id
+            var googleClaim =
+                _httpContextAccessor.HttpContext.User
+                .FindFirst(ClaimTypes.NameIdentifier);
+
+            if (googleClaim != null && !string.IsNullOrEmpty(googleClaim.Value))
+            {
+                myGId = googleClaim.Value;
+                myUserId = Service.GetUser(googleClaim.Value).Id;
+                StateHasChanged();
+            }
+
+            await FetchUsers();
+        }
+
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task FetchUsers()
+    {
+        appUsers = await Service.GetUsers();
+        foreach (var item in appUsers)
+        {
+            List<SelfEvaluation> i = await Service.GetSelfEvalsAsync(item.Id);
+            userEvalCount.Add(item.Id, i.Count);
+        }
+        StateHasChanged();
+    }
+
+    private async void StartDataFetch()
+    {
+        await FetchData(int.Parse(userId));
+    }
+
+    private async Task FetchData(int userId)
+    {
+        exception = null;
+        buttonDisabled = true;
+
+        try
+        {
+            data = await Task.Run(() => Service.GetUserSelfEvalAvgPerSet(userId));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
+        finally
+        {
+            buttonDisabled = false;
+            StateHasChanged();
+        }
+    }
+}

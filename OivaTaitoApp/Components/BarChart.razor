@@ -1,0 +1,149 @@
+﻿@page "/bar-chart"
+
+@using Microsoft.AspNetCore.Http
+@using System.Drawing
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using ChartJs.Blazor
+@using ChartJs.Blazor.Common
+@using ChartJs.Blazor.Interop
+@using ChartJs.Blazor.Util
+@using ChartJs.Blazor.BarChart
+@using ChartJs.Blazor.Common.Axes
+@using ChartJs.Blazor.BarChart.Axes
+@using ChartJs.Blazor.Common.Axes.Ticks
+@using OivaTaitoApp.Components
+@using OivaTaitoApp.Userid
+
+@inject GlobalId globalId
+@inject IHttpContextAccessor _httpContextAccessor
+@inherits OwningComponentBase<UserService>
+
+@inject IJSRuntime JSRuntime;
+
+<AuthorizeView>
+    <Authorized>
+            @if (userAvgByCat != null && totalAvgByCat != null && questionCategories != null)
+            {
+                <Chart @ref="barChart" Config="barConfig" />
+            }
+            else
+            {
+                <!-- Loader -->
+                <center>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Ladataan tietoja...</span>
+                    </div>
+                    <p style="font-weight: 600">Ladataan kaaviota...</p>
+                </center>
+            }
+
+        <div class="bar-chart-paragraph-container">
+            <p>Kaaviossa näet viimeisimmän tuloksen per kategoria. Sininen palkki kuvaa sinun tulosta, virheä taas muiden käyttäjien.</p>
+            <p>Palkin tulos on laskettu kategoriassa antamiesi vastausten keskiarvoista viimeisimmän itsearviointisi mukaan.</p>
+        </div>
+        <style>
+            body {
+                background-color: RGBA(226, 224, 229, .30);
+            }
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code{
+    private List<QuestionCategory> questionCategories;
+    private Dictionary<int, float> userAvgByCat;
+    private Dictionary<int, float> totalAvgByCat;
+
+    private Chart barChart;
+    private BarConfig barConfig;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            questionCategories = Service.GetQuestionCategories();
+            int userId = Service.GetUserId(globalId.GetGlobalId());
+            userAvgByCat = Service.LatestUserAvgScorePerCat(userId);
+            totalAvgByCat = Service.TotalAverageScoreByCategory();
+
+            barConfig = new BarConfig
+            {
+                Options = new BarOptions
+                {
+                    Responsive = true,
+                    AspectRatio = 1.4,
+                    Scales = new BarScales
+                    {
+                        XAxes = new List<CartesianAxis>
+                        {
+                            new BarCategoryAxis
+                            {
+                                BarPercentage = 0.5,
+                                BarThickness = BarThickness.Flex
+                            }
+                        },
+                        YAxes = new List<CartesianAxis>
+                        {
+                            new BarLinearCartesianAxis
+                            {
+                                Ticks = new LinearCartesianTicks
+                                {
+                                    BeginAtZero = true,
+                                    Max = 5
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            var userAvgsDataSet = new BarDataset<float>
+            {
+                Label = "Sinun keskiarvosi",
+                BackgroundColor = "#56638B",
+                BorderWidth = 0,
+                HoverBackgroundColor = "#56638B",
+                HoverBorderColor = "#3F4B63",
+                HoverBorderWidth = 1,
+                BorderColor = "#ffffff",
+            };
+
+            var totalAvgsDataSet = new BarDataset<float>
+            {
+                Label = "Kaikkien keskiarvot",
+                BackgroundColor = "#4CA172",
+                BorderWidth = 0,
+                HoverBackgroundColor = "#4CA172",
+                HoverBorderColor = "#3A674A",
+                HoverBorderWidth = 1,
+                BorderColor = "#ffffff",
+            };
+
+            foreach (QuestionCategory category in questionCategories)
+            {
+                barConfig.Data.Labels.Add(category.Identifier);
+
+                float userAvgValue;
+                if (!userAvgByCat.TryGetValue(category.Id, out userAvgValue))
+                    userAvgValue = 0;
+                userAvgsDataSet.Add(userAvgValue);
+
+                float totalAvgValue;
+                if (!totalAvgByCat.TryGetValue(category.Id, out totalAvgValue))
+                    totalAvgValue = 0;
+                totalAvgsDataSet.Add(totalAvgValue);
+            }
+
+            barConfig.Data.Datasets.Add(userAvgsDataSet);
+            barConfig.Data.Datasets.Add(totalAvgsDataSet);
+
+            StateHasChanged();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

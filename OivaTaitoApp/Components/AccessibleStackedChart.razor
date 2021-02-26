@@ -1,0 +1,117 @@
+﻿@page "/accessible-stacked-chart"
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Data.Models
+@using Microsoft.AspNetCore.WebUtilities
+@using OivaTaitoApp.Services
+@using ChartJs.Blazor
+@using ChartJs.Blazor.Interop
+@using ChartJs.Blazor.Util
+@using ChartJs.Blazor.Common
+@using ChartJs.Blazor.Common.Enums
+@using ChartJs.Blazor.Common.Axes
+@using ChartJs.Blazor.Common.Axes.Ticks
+@using ChartJs.Blazor.LineChart
+@using OivaTaitoApp.ChartJSClasses
+@using OivaTaitoApp.Components
+@using OivaTaitoApp.Userid
+@inherits OwningComponentBase<UserService>
+@inject GlobalId globalId
+
+@foreach (QuestionSet item in questionSets)
+{
+<div class="row justify-content-center" style="padding-top: 15px;">
+    
+    <ul class="list-group w-100">
+        <li class="row justify-content-center" tabindex="0" style="margin: 15px;">@item.Title</li>
+                @foreach (SelfEvalBySet selfEval in selfEvalsBySet)
+                {
+                    if (selfEval.setId_ == item.Id)
+                    {
+                        <li>
+                            <span class="badge badge-pill badge-light" tabindex="0" style="margin-top: 5px;">@selfEval.avgScore_ : @selfEval.evalDate_.ToString("dd/MM/yyyy")</span>
+                        </li>
+                    }
+                }
+    </ul>
+</div>
+}
+
+@code {
+    private List<StackChartDataModel> dataList;
+    private Dictionary<int, float> lastValues = new Dictionary<int, float>();
+    private List<QuestionSet> questionSets = new List<QuestionSet>();
+    private List<QuestionCategory> questionCategories;
+    private Dictionary<int, LineDataset<float>> datasets = new Dictionary<int, LineDataset<float>>();
+
+    private List<SelfEvalBySet> selfEvalsBySet = new List<SelfEvalBySet>();
+
+    public class SelfEvalBySet
+    {
+        public int setId_ { get; set; }
+        public float avgScore_ { get; set; }
+        public DateTime evalDate_ { get; set; }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // get current user
+            int user = Service.GetUserId(globalId.GetGlobalId());
+
+            questionCategories = Service.GetQuestionCategories();
+
+            //Populate questionSets list
+            questionCategories.ForEach(x => questionSets.AddRange(x.QuestionSets));
+
+            dataList = Service.GetUserSelfEvalAvgPerSet(user);
+
+            foreach (QuestionSet set in questionSets)
+            {
+                string CategoryColor = questionCategories.FirstOrDefault(c => c.Id.Equals(set.QuestionCategoryId)).ColorHex;
+
+                var userAvgsDataSet = new LineDataset<float>
+                {
+                    Label = set.Title,
+                    PointRadius = 3,
+                    PointHitRadius = 3,
+                    PointHoverBorderWidth = 3,
+                    PointHoverRadius = 3,
+                    BorderWidth = 4,
+                    BackgroundColor = "#" + CategoryColor,
+                    //BackgroundColor = ColorUtil.RandomColorString(),
+                    //BorderColor ,
+                    Fill = true
+                };
+                datasets.Add(set.Id, userAvgsDataSet);
+                lastValues.Add(set.Id, 0);
+            }
+
+            foreach (StackChartDataModel dataListItem in dataList)
+            {
+                foreach (var dataset in datasets)
+                {
+                    float avg = 0;
+
+                    if (dataListItem.AveragePerCategory.ContainsKey(dataset.Key))
+                    {
+                        dataListItem.AveragePerCategory.TryGetValue(dataset.Key, out avg);
+                        lastValues[dataset.Key] = avg;
+                        dataset.Value.Add(avg);
+                        selfEvalsBySet.Add(new SelfEvalBySet { setId_ = dataset.Key, avgScore_ = (float)Math.Round(avg, 1), evalDate_ = dataListItem.EvaluatedAt });
+                    }
+                    else
+                    {
+                        lastValues.TryGetValue(dataset.Key, out avg);
+                        dataset.Value.Add(avg);
+                        selfEvalsBySet.Add(new SelfEvalBySet { setId_ = dataset.Key, avgScore_ = (float)Math.Round(avg, 1), evalDate_ = dataListItem.EvaluatedAt });
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+
+        return base.OnAfterRenderAsync(firstRender);
+    }
+}

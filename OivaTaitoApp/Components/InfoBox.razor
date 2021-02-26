@@ -1,0 +1,18 @@
+﻿@using OivaTaitoApp.Components
+@inject IJSRuntime JSRuntime;
+
+<i class="fa fa-info-circle" style="font-size: 26px; cursor: pointer;" data-toggle="tooltip" tabindex="0" triggers="focus" title="@Title"></i>
+
+
+@code {
+    [Parameter]
+    public string Title { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("addTooltips");
+        }
+    }
+}

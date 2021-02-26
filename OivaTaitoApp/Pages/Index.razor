@@ -1,0 +1,101 @@
+﻿@page "/"
+
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Services
+@using OivaTaitoApp.Userid
+
+@inject IHttpContextAccessor _httpContextAccessor
+@inject GlobalId _globalId
+
+@inherits OwningComponentBase<UserService>
+
+<div class="container">
+    <main>
+        <h1>Tervetuloa OivaTaito-sovellukseen!</h1>
+        <br />
+        <AuthorizeView>
+            <Authorized>
+                <h2 class="front-page-hello">Mukavaa että olet täällä @context.User.Identity.Name!</h2>
+
+
+                @if (loadingDone)
+                {
+                    if (isInitEvalCompleted)
+                    {
+                        <div class="front-page-buttons">
+                            <a class="ml-md-auto btn btn-primary"
+                               href="/results"
+                               role="button"
+                               target="_top">Tuloksesi</a>
+
+
+                            <a class="ml-md-auto btn btn-primary"
+                               href="/evaluationstart"
+                               role="button"
+                               target="_top">Itsearviointi</a>
+
+                            <a class="ml-md-auto btn btn-primary"
+                               href="/usersettings"
+                               role="button"
+                               target="_top">Tietosi</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <p>Tee ensimäiseksi lähtötasotesti, jonka avulla kartoitamme tämänhetkisen osaamistasosi.</p>
+                        <a class="ml-md-auto btn btn-primary"
+                           role="button"
+                           href="/initeval-test/0"
+                           target="_top">Lähtötasotestiin</a>
+                    }
+
+                }
+                else
+                {
+                    <p>Tietojasi ladataan, odota hetki...</p>
+                }
+
+            </Authorized>
+            <NotAuthorized>
+                <p>Aloittaaksesi sovelluksen käytön, tulee sinun kírjautua sisään sovellukseen.</p>
+                <p>Kirjautuminen käyttää hyödykseen Google-tunnusta.</p>
+
+            </NotAuthorized>
+        </AuthorizeView>
+
+        <br />
+        <p>OivaTaito on työkalu, jolla voidaan visualisoida ja konkretisoida oma geneerinen osaaminen. Sovelluksen on tarkoitus tukea opiskelijan oman osaamisen tunnistamista ja sanoittamista sekä tunnistetun osaamispotentiaalin soveltamista emergentissä toimintaympäristössä ja verkostoissa.</p>
+        <p>OivaTaito on kehitetty osana <a href="https://www.oivaosaaminen.fi/">Oiva-hanketta</a>.</p>
+        <br />
+        <div class="front-page-logos">
+            <img src="./Images/EU_ESR_FI_vertical_20mm_rgb.png" alt="ESR lipputunnus" />
+            <img src="./Images/VipuvoimaaEU_2014_2020_rgb.png" alt="Vipuvoimaa EU:lta -tunnus" />
+
+        </div>
+    </main>
+</div>
+
+@code{
+    private bool loadingDone;
+    private bool isInitEvalCompleted;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            int userId = 0;
+            bool auth = _httpContextAccessor.HttpContext.User?.Identity.IsAuthenticated == true;
+            if (auth)
+            {
+                userId = Service.GetUserId(_globalId.GetGlobalId());
+                if (userId != 0)
+                    isInitEvalCompleted = Service.IsInitEvalCompleted(userId);
+            }
+
+            loadingDone = true;
+            StateHasChanged();
+        }
+
+        return base.OnAfterRenderAsync(firstRender);
+    }
+}

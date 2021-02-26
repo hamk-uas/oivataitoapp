@@ -1,0 +1,133 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+
+@inject NavigationManager UriHelper
+@inject IHttpContextAccessor _httpContextAccessor
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject HttpClient Http
+
+@inherits OwningComponentBase<UserService>
+
+@if (!string.IsNullOrEmpty(User.Identity.Name))
+{
+    <img class="avatar" tabindex="0" alt="User profile picture" src="@Avatar" @onclick="NavigateToUserSettings" />
+    <p aria-label="Username"><b> @GivenName @Surname</b></p>
+
+    <a class="ml-md-auto btn btn-primary" role="button" @onclick="ClearLS"
+       href="/Logout"
+       target="_top">Kirjaudu ulos</a>
+}
+else
+{
+    <a class="ml-md-auto btn btn-primary" role="button"
+       href="/Login"
+       target="_top">Kirjaudu sisään</a>
+}
+
+<style>
+    .avatar {
+        cursor: pointer;
+        width: 3em;
+        height: 3em;
+    }
+    p {
+        top: 50%;
+        margin-bottom: 0;
+        margin-left: 10px;
+    }
+    
+</style>
+
+
+@functions {
+
+    private ClaimsPrincipal User;
+    private string GivenName;
+    private string Surname;
+    private string Avatar;
+    private string Id;
+
+    AppUser objUser = new AppUser();
+
+
+    void NavigateToUserSettings()
+    {
+        UriHelper.NavigateTo("/usersettings");
+    }
+
+    async void ClearLS()
+    {
+        await localStorage.ClearAsync();
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Set the user to determine if they are logged in
+        User = _httpContextAccessor.HttpContext.User;
+
+        // Try to get the GivenName
+        var givenName =
+            _httpContextAccessor.HttpContext.User
+            .FindFirst(ClaimTypes.GivenName);
+
+        if (givenName != null)
+        {
+            GivenName = givenName.Value;
+        }
+        else
+        {
+            GivenName = User.Identity.Name;
+        }
+
+        // Try to get the Surname
+        var surname =
+            _httpContextAccessor.HttpContext.User
+            .FindFirst(ClaimTypes.Surname);
+
+        if (surname != null)
+        {
+            Surname = surname.Value;
+        }
+        else
+        {
+            Surname = "";
+        }
+
+        // Try to get Avatar
+        var avatar =
+        _httpContextAccessor.HttpContext.User
+        .FindFirst("urn:google:image");
+
+        if (avatar != null)
+        {
+            Avatar = avatar.Value;
+        }
+        else
+        {
+            Avatar = "";
+        }
+
+        // Try to get the Id
+        var id =
+            _httpContextAccessor.HttpContext.User
+            .FindFirst(ClaimTypes.NameIdentifier);
+
+        if (id != null)
+        {
+            Id = id.Value;
+        }
+        else
+        {
+            Id = null;
+        }
+
+        objUser.GoogleId = Id;
+
+        if (!Service.IsExistingUser(Id))
+            Service.SaveUser(objUser);
+
+    }
+}

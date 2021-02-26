@@ -1,0 +1,429 @@
+﻿@using OivaTaitoApp.Data.Models
+@using OivaTaitoApp.Services
+@using OivaTaitoApp.Userid
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.WebUtilities
+@using OivaTaitoApp.Components
+@inject GlobalId globalId
+@inject NavigationManager NavManager
+@inject NavigationManager UriHelper
+@inject IHttpContextAccessor _httpContextAccessor
+@inherits OwningComponentBase<EvaluationService>
+@page "/question-card"
+@page "/question-card/{CurrentCategory:int}"
+@inject IJSRuntime JSRuntime;
+<AuthorizeView>
+    <Authorized Context="Auth">
+        <div class="container">
+
+            @if (showModal)
+            {
+                <div class="modal fade show" data-backdrop="static" style="display:block" aria-modal="true" role="dialog" @onclick="@ModalCancel">
+                    <div class="modal-dialog modal-xl modal-dialog-scrollable" @onclick:stopPropagation="true">
+                        <div class="modal-content">
+
+                            <!-- Modal Header -->
+                            <div class="modal-header">
+                                <h4 class="modal-title">Palaute</h4>
+                                <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                            </div>
+
+                            <!-- Modal body -->
+                            <div class="modal-body">
+                                <p>
+                                    @if (average > 0)
+                                    {
+                                        <h3>Keskiarvosi on: @averageString</h3>
+                                    }
+                                    else
+                                    {
+                                        <h3></h3>
+                                    }
+
+                                    @if (feedBack != null)
+                                    {
+                                        <h4>@feedBack.FeedbackContent</h4>
+                                    }
+                                    else
+                                    {
+                                    <p>Feedback not found!</p>
+                                    }
+                                </p>
+                                    <button type="button" class="btn btn-primary" @onclick="@ShowImprovement">Näytä Kehitysehdotus</button>
+                                    <div class="improvement">
+                                        @if (showImprovement == true && improvement != null)
+                                        {
+                                            <div class="improvement-content">
+                                                <p>@improvement.ImprovementContent</p>
+                                            </div>
+                                            <div class="improvement-video">
+                                                @if (improvement.ImprovementVideoUrl != null && !string.IsNullOrEmpty(improvement.ImprovementVideoUrl))
+                                                {
+                                                    <center><iframe class="iframe-container" src="@improvement.ImprovementVideoUrl" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
+                                                }
+                                                else
+                                                {
+                                                    <p>Video not found!</p>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                @if (showProfileButton)
+                                {
+                                    <!-- Modal footer -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" @onclick=@ToProfile>Profiiliin</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
+
+            @if (questionCategories != null)
+            {
+                <div class="table table-xl">
+                    <div class="q-card-top">
+                        <h3 class="category-title"> @Category.Identifier . @Category.Title</h3>
+
+                        <h5 class="set-title">@set.Identifier : @set.Title</h5>
+
+                        <ul class="points-list">
+                            <li><span class="points-list-first-row">5</span> = aina - erinomaiset taidot - paljon kokemusta</li>
+                            <li><span class="points-list-second-row">4</span> = yleensä - kiitettävät taidot - hyvin kokemusta</li>
+                            <li><span class="points-list-third-row">3</span> = usein - hyvät taidot - jonkin verran kokemusta</li>
+                            <li><span class="points-list-fourth-row">2</span> = joskus - tyydyttävät taidot - vähän kokemusta</li>
+                            <li><span class="points-list-fifth-row">1</span> = en koskaan - välttävät taidot - ei kokemusta</li>
+                        </ul>
+                        <ul>
+                            <li><center style="text-align: center;">@progress</center></li>
+                        </ul>
+                    </div>
+                    @foreach (Question item in @set.Questions)
+                    {
+                        <div class="q-container">
+                            <div class="row justify-content-center"><div class="q-item">@item.Identifier : @item.Content</div></div>
+                            <div class="row">
+                                <div class="col">
+                                    <input id="slidertext" name="slider-label" class="label" value="@sliderValueDict[@item.Id]" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col" style="text-align: right;">1</div>
+                                <div class="col-8" style="padding: 0px;">
+                                    <input type="range" class="slider" name="slider" step="0.5" min="1" max="5" @onchange="@(e => SliderChange(@item.Id, @sliderValueDict[item.Id]))" @bind-value="@sliderValueDict[@item.Id]" @bind-value:event="oninput">
+                                </div>
+                                <div class="col" style="text-align: left;">5</div>
+                            </div>
+                        </div>
+                    }
+                    @if (setIndex + 1 < Category.QuestionSets.Count)
+                    {
+                        buttonVar = "Seuraava";
+                    }
+                    else
+                    {
+                        buttonVar = "Lähetä";
+                    }
+                <div>
+                    <center class="submit-button"><button type="button" class="ml-md-auto btn btn-primary" @onclick="@(e => @OnSubmit(set.Id))">@buttonVar</button></center>
+                    <center class="submit-button"><button type="button" class="ml-md-auto btn btn-primary" @onclick="@(e => @HandleClick())">@buttonVar</button></center>
+                </div>
+                </div>
+            }
+
+        </div>
+        <style>
+            body {
+                background-color: @CategoryColor;
+            }
+
+            .label {
+                text-align: center;
+                border-radius: 9999em;
+                box-shadow: 0 6px 10px 0 rgba(0, 0, 0, .1);
+                border: 0;
+                outline: 0;
+                background: #4CAF50;
+                opacity: 0.6;
+                width: 3em;
+                margin: 15px;
+            }
+
+            .slider {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 10px;
+                border-radius: 5px;
+                background: #d3d3d3;
+                outline: none;
+                opacity: 1.2;
+                -webkit-transition: .2s;
+                transition: opacity .2s;
+            }
+
+                .slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: #4CAF50;
+                    cursor: pointer;
+                }
+
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <NotAuthorizedComponent />
+    </NotAuthorized>
+
+</AuthorizeView>
+
+
+@code {
+
+
+
+    string CategoryColor;
+
+    private string progress;
+    private int answered;
+    private int questionsInCategory;
+
+    private Dictionary<int, float> sliderValueDict = new Dictionary<int, float>();
+    float average = 0;
+    string averageString = "";
+    private List<float> averageList = new List<float>();
+
+    string buttonVar = "Seuraava";
+
+    [CascadingParameter(Name = "CatIndex")]
+    int categoryIndex { get; set; }
+
+    [CascadingParameter(Name = "SetIndex")]
+    int setIndex { get; set; }
+
+    [CascadingParameter(Name = "SetList")]
+    private List<QuestionSet> setList { get; set; }
+
+    [CascadingParameter(Name = "CurCat")]
+    private int CurrentCategory { get; set; }
+
+    [CascadingParameter(Name = "AllCats")]
+    private List<QuestionCategory> allCategories { get; set; }
+
+    [CascadingParameter(Name = "QCats")]
+    public List<QuestionCategory> questionCategories { get; set; }
+
+    [CascadingParameter]
+    QuestionCategory Category { get; set; }
+
+    [CascadingParameter(Name = "Set")]
+    QuestionSet set { get; set; }
+
+    EvalFeedback feedBack;
+
+    private List<SelfEvalResult> resultList = new List<SelfEvalResult>();
+
+
+    [Parameter] public EventCallback<List<SelfEvalResult>> OnItemClick { get; set; }
+    [Parameter] public EventCallback<List<SelfEvalResult>> OnItemSubmit { get; set; }
+
+    // collect slider values and remove duplicates
+    private void SliderChange(int QuestionId, float Value)
+    {
+        if (sliderValueDict.ContainsKey(QuestionId))
+        {
+            sliderValueDict[QuestionId] = Value;
+        }
+        sliderValueDict.ToList();
+        foreach (KeyValuePair<int, float> kvp in sliderValueDict)
+        {
+            // add results to result list before submit and remove duplicates
+            if (resultList.Any(i => i.QuestionId == QuestionId))
+            {
+                var itemToRemove = resultList.Where(item => item.QuestionId == QuestionId).FirstOrDefault();
+                resultList.Remove(itemToRemove);
+                resultList.Add(new SelfEvalResult() { Answer = Value, QuestionId = QuestionId });
+            }
+            else
+            {
+                resultList.Add(new SelfEvalResult() { Answer = Value, QuestionId = QuestionId });
+            }
+        }
+    }
+
+    private void OnSubmit(int questionsetId)
+
+    {
+        if (!sliderValueDict.ContainsValue(0))
+        {
+            foreach (SelfEvalResult result in resultList)
+            {
+                averageList.Add(result.Answer);
+            }
+
+            average = averageList.Average();
+            averageString = (average.ToString("#.##"));
+            // print feedback
+            feedBack = Service.GetFeedback(questionsetId, average);
+
+            GetImprovement();
+
+            // Show one set at a time and go to the next category when sets end
+            if (setIndex >= 0 && setIndex + 1 < setList.Count)
+            {
+                setIndex = setIndex + 1;
+                set = setList[setIndex];
+                ModalShow();
+                showProfileButton = false;
+                foreach (Question item in set.Questions)
+                {
+                    sliderValueDict.Add(item.Id, 0);
+                }
+            }
+            else if (Service.GetQuestionCategories().Where(c => c.Id.Equals(CurrentCategory + 1)).Count() == 0 && setIndex + 1 >= setList.Count)
+            {
+                ModalShow();
+                List<SelfEvalResult> param = new List<SelfEvalResult>(resultList);
+                param.ToList();
+                OnItemSubmit.InvokeAsync(param);
+                showProfileButton = true;
+            }
+            else
+            {
+                ModalShow();
+                @*CurrentCategory = CurrentCategory + 1;
+                setIndex = 0;
+                questionCategories = Service.GetQuestionCategories().Where(c => c.Id.Equals(CurrentCategory)).ToList();
+                Category = questionCategories[categoryIndex];
+                setList = Service.GetQuestionSets(Category.Id).ToList();
+                set = setList[setIndex];*@
+                List<SelfEvalResult> param = new List<SelfEvalResult>(resultList);
+                param.ToList();
+                OnItemSubmit.InvokeAsync(param);
+                resultList.Clear();
+                showProfileButton = true;
+                @*CategoryColor = "#" + Category.ColorHex;
+                foreach (Question item in set.Questions)
+                {
+                    sliderValueDict.Add(item.Id, 0);
+                }
+                questionsInCategory = 0;
+                answered = 0;
+                foreach (QuestionSet i in setList)
+                {
+                    foreach (Question item in i.Questions)
+                    {
+                        questionsInCategory++;
+                    }
+                }*@
+            }
+            ClearRadios();
+            ScrollToTop();
+            showImprovement = false;
+            averageList.Clear();
+
+            answered = sliderValueDict.Where(i => i.Value > 0).Count();
+
+            progress = ((double)answered / (double)questionsInCategory).ToString("0.00%");
+        }
+        else
+        {
+            Alert();
+        }
+    }
+
+    private void HandleClick()
+    {
+        List<SelfEvalResult> param = new List<SelfEvalResult>(resultList);
+        param.ToList();
+        OnItemClick.InvokeAsync(param);
+    }
+
+    protected override void OnInitialized()
+    {
+        @*int categoryIndex = 0;
+        int setIndex = 0;*@
+        base.OnInitialized();
+        @*allCategories = Service.GetQuestionCategories();
+        questionCategories = Service.GetQuestionCategories().Where(c => c.Id.Equals(CurrentCategory)).ToList();
+        Category = questionCategories[categoryIndex];
+        setList = Service.GetQuestionSets(Category.Id).ToList();
+        set = setList[setIndex];*@
+    CategoryColor = "#" + Category.ColorHex;
+    foreach (Question item in set.Questions)
+    {
+        sliderValueDict.Add(item.Id, 0);
+    }
+    questionsInCategory = 0;
+    foreach (QuestionSet i in setList)
+    {
+        foreach (Question item in i.Questions)
+        {
+            questionsInCategory++;
+        }
+    }
+    progress = "0.00%";
+}
+
+public async override Task SetParametersAsync(ParameterView parameters)
+{
+    await base.SetParametersAsync(parameters);
+}
+
+// clear radio button selections
+async void ClearRadios()
+{
+    await JSRuntime.InvokeVoidAsync("ClearRadioButtonSelections");
+}
+
+// alert for invalid radio button selections
+async void Alert()
+{
+    await JSRuntime.InvokeVoidAsync("AlertFunction");
+}
+
+// scroll to top after submit
+async void ScrollToTop()
+{
+    await JSRuntime.InvokeVoidAsync("scrollToTop");
+}
+
+// popup functions
+bool showModal = false;
+bool showProfileButton = false;
+
+void ModalShow() => showModal = true;
+void ModalCancel() => showModal = false;
+void ToProfile()
+{
+    showModal = false;
+    NavManager.NavigateTo("/results");
+}
+
+// evaluation improvement functions
+private EvalImprovement improvement = new EvalImprovement();
+bool showImprovement = false;
+
+void ShowImprovement()
+{
+    if (!showImprovement)
+    {
+        showImprovement = true;
+    }
+    else
+    {
+        showImprovement = false;
+    }
+
+}
+
+void GetImprovement()
+{
+    improvement = Service.GetImprovement(set.Id);
+}
+}
